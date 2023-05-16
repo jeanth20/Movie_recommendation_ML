@@ -85,13 +85,12 @@ def search_movie_poster(movie_title):
 
 
 
-
 @app.get("/get_movie_data")
 async def get_movies()->JSONResponse:
     # credits_df = pd.read_csv("DATA/credits.csv")
     # movies_df = pd.read_csv("DATA/movies.csv")
 
-    with open("DATA/movies.json") as file:
+    with open("DATA/json_files/movies.json") as file:
         data = json.load(file)
 
     # Create a DataFrame from the JSON data
@@ -104,33 +103,51 @@ async def get_movies()->JSONResponse:
     
     # Iterate over the limited number of rows in the DataFrame
     for _, row in movies_df.head(max_entries).iterrows():
-        # mtitle = row['title']
-        # poster_url = search_movie_poster(mtitle)
-        
-        # if poster_url:
-        #     print("Poster URL:", poster_url)
-        #     # Use the poster URL for further processing
-        # else:
-        #     print("No poster found for the movie:", mtitle)
 
-        image_src = row['imageSrc']
-        id = row['id']
-        title = row['title']
-        runtime = row['runtime']
-        genre = 'Genre'
-        vote_count = row['vote_count']
-        ranking = row["ranking"]
-        rating = str(row['rating'])
+        tmdb_id = row["tmdb_id"]
+        imdb_id = row["imdb_id"]
+        title = row["title"]
+        original_title = row["original_title"]
+        tagline = row["tagline"]
+        overview = row["overview"]
+        # "genre": [
+        #     "Action",
+        #     "Adventure",
+        #     "Fantasy",
+        #     "Science Fiction"
+        # ],
+        # "director": [],
+        # "actors": [],
+        release_year = str(row["release_year"])
+        runtime = str(row["runtime"])
+        language = row["language"]
+        country = row["country"]
+        poster_url = row["poster_url"]
+        trailer_url = row["trailer_url"]
+        revenue = str(row["revenue"])
+        rating = str(row["rating"])
+        popularity = str(row["popularity"])
+        vote_average = str(row["vote_average"])
+        vote_count = str(row["vote_count"])
 
         movie = {
-            'imageSrc': image_src,
-            'id': id,
-            'title': title,
-            'runtime': runtime,
-            'genre': genre,
-            'vote_count': vote_count,
-            'ranking': ranking,
-            'rating': rating
+            "tmdb_id": tmdb_id,
+            "imdb_id": imdb_id,
+            "title": title,
+            "original_title": original_title,
+            "tagline": tagline,
+            "overview": overview,
+            "release_year": release_year,
+            "runtime": runtime,
+            "language": language,
+            "country": country,
+            "poster_url": poster_url,
+            "trailer_url": trailer_url,
+            "revenue": revenue,
+            "rating": rating,
+            "popularity": popularity,
+            "vote_average": vote_average,
+            "vote_count": vote_count
         }
         
         movie_data.append(movie)
