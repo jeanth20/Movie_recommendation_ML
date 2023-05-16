@@ -1,0 +1,21 @@
+.window
+  .icons: span
+  
+  .title spacy_demo.py
+   
+  pre.lang-python
+    code.
+      import spacy.en
+      from spacy.symbols import VERB, nsubj, dobj
+
+      def find_acquisitions(nlp, text, buy_words):
+          doc = nlp(text)
+          for ent in doc.ents:
+              ent.merge(ent.root.tag_, ent.text, ent.label_)
+          buy_words = set(nlp.vocab.strings[w] for w in buy_words)
+          for token in doc:
+              if token.pos == VERB and token.lemma in buy_words:
+                  buyer = [w for w in token.lefts if w.dep == nsubj]
+                  bought = [w for w in token.rights if w.dep == dobj]
+                  if buyer and bought:
+                      yield token, buyer[0], bought[0]
