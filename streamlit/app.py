@@ -1,162 +1,140 @@
 import streamlit as st
+from streamlit_option_menu import option_menu
+import streamlit.components.v1 as components
+from streamlit_card import card
 import pickle
 import requests
+import random
+import pandas as pd
+import csv
 
 st.markdown("""
 <style>
-    #MainMenu, .header, .css-18ni7ap.e8zbici2 {
+    #MainMenu, header, footer, .css-18ni7ap.e8zbici2 {
     visibility: hidden;
 }
 </style>
 """, unsafe_allow_html=True)
 
-from streamlit_option_menu import option_menu
 
-# with st.sidebar:
-selected = option_menu(
+global movies
+global similarity
+global movies_list
+
+movies = pickle.load(open("movies_list.pkl", 'rb'))
+similarity = pickle.load(open("similarity.pkl", 'rb'))
+movies_list = movies['title'].values
+
+def fetch_poster(movie_id):
+    url = "https://api.themoviedb.org/3/movie/{}?api_key=c7ec19ffdd3279641fb606d19ceb9bb1&language=en-US".format(movie_id)
+    data = requests.get(url)
+    data = data.json()
+    poster_path = data['poster_path']
+    full_path = "https://image.tmdb.org/t/p/w500/" + poster_path
+    return full_path
+
+def random_movies_car():
+    st.header("Random Recommendations")
+    imageCarouselComponent = components.declare_component("image-carousel-component", path="frontend/public")
+    movies_ids = pd.read_csv('movies_ids.csv')
+    randMovies = []
+    i = 0
+    while i != 5:
+        movie_index = random.randint(0, len(movies_ids)-1)
+        movie_id = movies_ids.loc[movie_index, 'id']
+        movie_title = movies_ids.loc[movie_index, 'title']
+        poster_url = fetch_poster(movie_id)
+        randMovies.append((movie_id, movie_title, poster_url))
+        i += 1
+    imageUrls = []
+    for movie_id, movie_title, movie_poster in randMovies:
+        imageUrls.append(fetch_poster(movie_id))
+    imageUrls = list(set(imageUrls))
+    imageCarouselComponent(imageUrls=imageUrls, height=200)
+
+def recommend(movie):
+    index=movies[movies['title']==movie].index[0]
+    distance = sorted(list(enumerate(similarity[index])), reverse=True, key=lambda vector:vector[1])
+    recommend_movie=[]
+    recommend_poster=[]
+    for i in distance[1:11]:
+        movies_id=movies.iloc[i[0]].id
+        recommend_movie.append(movies.iloc[i[0]].title)
+        recommend_poster.append(fetch_poster(movies_id))
+    return recommend_movie, recommend_poster
+
+def movie_profile(movie):
+    print(movie)
+    if movie in movies['title'].values:
+        index = movies[movies['title'] == movie].index[0]
+        movie_id = movies.iloc[index].id
+        movie_title = movies.iloc[index].title
+        movie_tags = movies.iloc[index].tags
+
+        movie_details = {
+            'id': movie_id,
+            'title': movie_title,
+            'tags': movie_tags,
+        }
+        return movie_details
+    else:
+        return None
+
+def movie_profile_csv(movie):
+    with open('dataset.csv', 'r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            if row['title'] == movie:
+                movie_id = row['id']
+                movie_title = row['title']
+                movie_genre = row['genre']
+                movie_original_language = row['original_language']
+                movie_overview = row['overview']
+                movie_popularity = row['popularity']
+                movie_release_date = row['release_date']
+                movie_vote_average = row['vote_average']
+                movie_vote_count = row['vote_count']
+
+                movie_details = {
+                    'id': movie_id,
+                    'title': movie_title,
+                    'genre': movie_genre,
+                    'original_language': movie_original_language,
+                    'overview': movie_overview,
+                    'popularity': movie_popularity,
+                    'release_date': movie_release_date,
+                    'vote_average': movie_vote_average,
+                    'vote_count': movie_vote_count,                   
+                }
+                return movie_details
+    return None
+
+with st.sidebar:
+#     selected = option_menu(
+#     menu_title=None,
+#     options=["Home", "Similar", "Movie", "Bio" ],
+#     icons=["house", "book", "film", "receipt-cutoff"],
+#     menu_icon="cast",
+#     default_index=0,
+#     orientation="horizontal"
+# )
+    selected = option_menu(
     menu_title=None,
-    options=["Home", "Similar"],
-    icons=["house", "book"],
+    options=["Home", "Similar", "Movie", "Bio" ],
+    icons=["house", "book", "film", "receipt-cutoff"],
     menu_icon="cast",
     default_index=0,
-    orientation="horizontal"
 )
 
 if selected == "Home":
-    st.title(f"You are on the {selected}")
-    
-    # Read the contents of your HTML file
-    with open('static/index.html', 'r') as file:
-        html_code = file.read()
-        
-    with open('static/style.css', 'r') as file:
-        css_code = file.read()
-
-    with open('static/script.js', 'r') as file:
-        js_code = file.read()
-        
-    # Embed the HTML code in Streamlit using st.markdown or st.components.v1.html
-    # st.markdown(html_code, unsafe_allow_html=True)
-    # st.markdown(css_code, unsafe_allow_html=True)
-    # st.markdown(js_code, unsafe_allow_html=True)
-    
-    # import streamlit.components.v1 as components
-
-    # components.html(html_code)
-    # # components.html(css_code)
-    # components.html(js_code)
-    
-    import streamlit as st
-    import streamlit.components.v1 as components
-
-    html_string = '''
-    <h1>HTML string in RED</h1>
-
-    <script language="javascript">
-    document.querySelector("h1").style.color = "red";
-    console.log("Streamlit runs JavaScript");
-    alert("Streamlit runs JavaScript");
-    </script>
-    '''
-
-    components.html(html_string)  # JavaScript works
-
-    st.markdown(html_string, unsafe_allow_html=True)    
-    
-    
-    
-    
+    # st.title(f"You are on the {selected}page")
+    random_movies_car()
 
 if selected == "Similar":
-    def fetch_poster(movie_id):
-        url = "https://api.themoviedb.org/3/movie/{}?api_key=c7ec19ffdd3279641fb606d19ceb9bb1&language=en-US".format(movie_id)
-        data=requests.get(url)
-        data=data.json()
-        poster_path = data['poster_path']
-        full_path = "https://image.tmdb.org/t/p/w500/"+poster_path
-        return full_path
-
-    movies = pickle.load(open("movies_list.pkl", 'rb'))
-    similarity = pickle.load(open("similarity.pkl", 'rb'))
-    movies_list=movies['title'].values
-
-    st.header("Movie Recommender System")
-
-    import streamlit.components.v1 as components
-
-    imageCarouselComponent = components.declare_component("image-carousel-component", path="frontend/public")
-
-
-    # import random
-    # random_number1 = random.randint(10, 1000)
-    # random_number2 = random.randint(1000, 10000)
-    # random_number3 = random.randint(10000, 20000)
-    # random_number4 = random.randint(20000, 30000)
-    # random_number5 = random.randint(40000, 50000)
+    # st.title(f"You are on the {selected} page")
     
-    # print(random_number1)
-    # print(random_number2)
-    # print(random_number3)
-    # print(random_number4)
-    # print(random_number5)
-        
-    # imageUrls = [
-    #     fetch_poster(int(random_number1)),
-    #     fetch_poster(int(random_number2)),
-    #     fetch_poster(int(random_number3)),
-    #     fetch_poster(int(random_number4)),
-    #     fetch_poster(int(random_number5)),
-    # ]
-
-    # num_of_random_numbers = 5
-    # random_numbers = []
-    # imageUrls = []
-
-    # for _ in range(num_of_random_numbers):
-    #     random_number = random.randint(10, 572154)
-    #     random_numbers.append(random_number)
-    #     print(random_number)
-
-    #     # Accessing each value individually
-    #     image_url = "fetch_poster(int({random_number}))"  # Using string formatting
-    #     # image_url = "fetch_poster(" + str(random_number) + ")"  # Using concatenation
-    #     imageUrls.append(image_url)
-
-        
-
-    imageUrls = [
-        # fetch_poster(1632),
-        fetch_poster(299536),
-        fetch_poster(17455),
-        fetch_poster(2830),
-        fetch_poster(429422),
-        # fetch_poster(9722),
-        fetch_poster(13972),
-        # fetch_poster(240),
-        # fetch_poster(155),
-        # fetch_poster(598),
-        # fetch_poster(914),
-        # fetch_poster(255709),
-        # fetch_poster(572154)
-    
-        ]
-
-
-    imageCarouselComponent(imageUrls=imageUrls, height=200)
+    st.header("Recommend Similar")
     selectvalue=st.selectbox("Select movie from dropdown", movies_list)
-
-    def recommend(movie):
-        index=movies[movies['title']==movie].index[0]
-        distance = sorted(list(enumerate(similarity[index])), reverse=True, key=lambda vector:vector[1])
-        recommend_movie=[]
-        recommend_poster=[]
-        for i in distance[1:11]:
-            movies_id=movies.iloc[i[0]].id
-            recommend_movie.append(movies.iloc[i[0]].title)
-            recommend_poster.append(fetch_poster(movies_id))
-        return recommend_movie, recommend_poster
-
-
 
     if st.button("Show Recommend"):
         movie_name, movie_poster = recommend(selectvalue)
@@ -193,3 +171,114 @@ if selected == "Similar":
         with col10:
             st.text(movie_name[9])
             st.image(movie_poster[9])
+
+if selected == "Movie":
+    # st.title(f"You are on the {selected} info page")
+    st.header("Movie Bio")
+    selectvalue = st.selectbox("Select movie from dropdown", movies_list)
+    if st.button("Show Movie Title"):
+        details = movie_profile(selectvalue)
+        if details is not None:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.image(fetch_poster(details['id']))
+            with col2:
+                st.header(details['title'])
+                st.write(details['id'])
+                st.write(details['tags'])
+        else:
+            st.text("Movie details not found.")
+
+
+
+    movies=pd.read_csv('dataset.csv')
+
+if selected == "Bio":
+    # st.title(f"You are on the {selected} info page")
+    st.header("Movie Bio")
+    selectvalue = st.selectbox("Select movie from dropdown", movies_list)
+    details = movie_profile_csv(selectvalue)
+    if details is not None:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.image(fetch_poster(details['id']))
+        with col2:
+            st.title(details['title'])
+            st.caption(details['release_date'])
+            st.write(details['overview'])
+            # st.write(details['popularity'], "\t\t", details['vote_average'], "\t\t", details['vote_count'])
+            st.caption(details['genre'])
+    else:
+        st.text("Movie details not found.")
+
+
+
+
+
+
+
+
+
+
+
+
+    # hasClicked = card(
+    # key="card1",
+    # title="Hello World!",
+    # text="This is a card",
+    # url="https://github.com/gamcoh/st-card",
+    # image="http://placekitten.com/200/300"
+    # )
+
+    # hasClicked2 = card(
+    # key="card2",
+    # title="Hello World!",
+    # text="This is a card",
+    # url="https://github.com/gamcoh/st-card",
+    # image="http://placekitten.com/200/300"
+    # )
+
+    
+
+    # html_string = '''
+    # <h1></h1>
+
+    # <script language="javascript">
+
+    #     document.querySelector("h1").style.color = "red";
+    #     alert("Streamlit runs JavaScript");
+    
+    # </script>
+    # '''
+
+    # components.html(html_string)  # JavaScript works
+
+    # st.markdown(html_string, unsafe_allow_html=True)
+    
+    
+    
+    
+
+    # With this you can add a html page
+    # Read the contents of your HTML file
+    # with open('static/index.html', 'r') as file:
+    #     html_code = file.read()
+        
+    # with open('static/style.css', 'r') as file:
+    #     css_code = file.read()
+
+    # with open('static/script.js', 'r') as file:
+    #     js_code = file.read()
+        
+    # Embed the HTML code in Streamlit using st.markdown or st.components.v1.html
+    # st.markdown(html_code, unsafe_allow_html=True)
+    # st.markdown(css_code, unsafe_allow_html=True)
+    # st.markdown(js_code, unsafe_allow_html=True)
+    
+    # import streamlit.components.v1 as components
+
+    # components.html(html_code)
+    # # components.html(css_code)
+    # components.html(js_code)
+    
+    # print(df[df['Name']=='Donna'].index.values)
