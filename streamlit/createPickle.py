@@ -1,6 +1,6 @@
 import pandas as pd
 import csv
-movies=pd.read_csv('dataset.csv')
+movies=pd.read_csv('dataset.csv', encoding='utf-8')
 
 # movies.head(10)
 # movies.describe()
