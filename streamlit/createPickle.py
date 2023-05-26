@@ -1,5 +1,5 @@
 import pandas as pd
-movies=pd.read_csv('data_handling/dataset.csv')
+movies=pd.read_csv('dataset.csv')
 
 # movies.head(10)
 # movies.describe()
